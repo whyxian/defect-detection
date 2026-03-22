@@ -1,6 +1,11 @@
 """
 PatchCore 缺陷检测模型训练脚本
 使用 anomalib 2.1.0 API
+
+PatchCore 是一种基于记忆库的无监督异常检测方法:
+1. 使用预训练的 CNN 提取特征
+2. 从正常样本中构建特征记忆库
+3. 推理时通过最近邻检索计算异常分数
 """
 
 import warnings
@@ -19,6 +24,18 @@ OUTPUT_PATH = PROJECT_ROOT / "outputs"
 
 
 def train():
+    """
+    训练 PatchCore 缺陷检测模型
+    
+    训练流程:
+    1. 初始化 PatchCore 模型
+    2. 加载数据集
+    3. 训练模型（构建特征记忆库）
+    4. 评估模型性能
+    
+    Returns:
+        Patchcore: 训练完成的模型实例
+    """
     print("=" * 50)
     print("PatchCore 缺陷检测模型训练")
     print("=" * 50)

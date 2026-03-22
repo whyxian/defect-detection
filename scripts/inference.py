@@ -1,6 +1,14 @@
 """
 PatchCore 缺陷检测推理脚本
 使用 anomalib 2.1.0 API
+
+支持两种推理模式:
+1. 单张图片检测: python inference.py --image /path/to/image.png
+2. 批量检测: python inference.py --dir /path/to/images/
+
+输出结果包含:
+- 异常分数 (0-1, 越高越异常)
+- 判定结果 (正常/缺陷)
 """
 
 import warnings
@@ -19,6 +27,15 @@ OUTPUT_PATH = PROJECT_ROOT / "outputs"
 
 
 def find_checkpoint():
+    """
+    查找训练好的模型检查点文件
+    
+    模型保存路径结构:
+    outputs/Patchcore/defect_detection/v0/weights/lightning/*.ckpt
+    
+    Returns:
+        Path | None: 检查点文件路径, 未找到则返回 None
+    """
     ckpt_dir = OUTPUT_PATH / "Patchcore" / "defect_detection" / "v0" / "weights" / "lightning"
     if ckpt_dir.exists():
         ckpt_files = list(ckpt_dir.glob("*.ckpt"))
@@ -28,6 +45,18 @@ def find_checkpoint():
 
 
 def predict_single(image_path: str):
+    """
+    对单张图片进行缺陷检测
+    
+    Args:
+        image_path: 图片文件路径
+    
+    Returns:
+        list: 预测结果列表
+    
+    Raises:
+        FileNotFoundError: 图片不存在或模型未训练
+    """
     image_path = Path(image_path)
     if not image_path.exists():
         raise FileNotFoundError(f"图片不存在: {image_path}")
@@ -81,6 +110,18 @@ def predict_single(image_path: str):
 
 
 def predict_batch(image_dir: str):
+    """
+    批量检测目录下的所有图片
+    
+    Args:
+        image_dir: 图片目录路径
+    
+    Returns:
+        list: 预测结果列表
+    
+    Raises:
+        FileNotFoundError: 目录不存在或模型未训练
+    """
     image_dir = Path(image_dir)
     if not image_dir.exists():
         raise FileNotFoundError(f"目录不存在: {image_dir}")
