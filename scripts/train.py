@@ -1,5 +1,5 @@
 """
-PaDiM 缺陷检测模型训练脚本
+PatchCore 缺陷检测模型训练脚本
 使用 anomalib 2.1.0 API
 """
 
@@ -10,7 +10,7 @@ from pathlib import Path
 
 from anomalib.data import Folder
 from anomalib.engine import Engine
-from anomalib.models import Padim
+from anomalib.models import Patchcore
 
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -20,13 +20,14 @@ OUTPUT_PATH = PROJECT_ROOT / "outputs"
 
 def train():
     print("=" * 50)
-    print("PaDiM 缺陷检测模型训练")
+    print("PatchCore 缺陷检测模型训练")
     print("=" * 50)
     
-    model = Padim(
-        backbone="resnet18",
-        layers=["layer1", "layer2", "layer3"],
+    model = Patchcore(
+        backbone="wide_resnet50_2",
+        layers=["layer2", "layer3"],
         pre_trained=True,
+        num_neighbors=9,
     )
     
     datamodule = Folder(

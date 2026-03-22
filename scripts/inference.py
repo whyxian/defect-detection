@@ -1,5 +1,5 @@
 """
-PaDiM 缺陷检测推理脚本
+PatchCore 缺陷检测推理脚本
 使用 anomalib 2.1.0 API
 """
 
@@ -11,7 +11,7 @@ import argparse
 
 from anomalib.data import PredictDataset
 from anomalib.engine import Engine
-from anomalib.models import Padim
+from anomalib.models import Patchcore
 
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -19,7 +19,7 @@ OUTPUT_PATH = PROJECT_ROOT / "outputs"
 
 
 def find_checkpoint():
-    ckpt_dir = OUTPUT_PATH / "Padim" / "defect_detection" / "v0" / "weights" / "lightning"
+    ckpt_dir = OUTPUT_PATH / "Patchcore" / "defect_detection" / "v0" / "weights" / "lightning"
     if ckpt_dir.exists():
         ckpt_files = list(ckpt_dir.glob("*.ckpt"))
         if ckpt_files:
@@ -33,13 +33,14 @@ def predict_single(image_path: str):
         raise FileNotFoundError(f"图片不存在: {image_path}")
     
     print("=" * 50)
-    print("PaDiM 缺陷检测推理")
+    print("PatchCore 缺陷检测推理")
     print("=" * 50)
     
-    model = Padim(
-        backbone="resnet18",
-        layers=["layer1", "layer2", "layer3"],
+    model = Patchcore(
+        backbone="wide_resnet50_2",
+        layers=["layer2", "layer3"],
         pre_trained=True,
+        num_neighbors=9,
     )
     
     engine = Engine()
@@ -85,13 +86,14 @@ def predict_batch(image_dir: str):
         raise FileNotFoundError(f"目录不存在: {image_dir}")
     
     print("=" * 50)
-    print("PaDiM 批量缺陷检测")
+    print("PatchCore 批量缺陷检测")
     print("=" * 50)
     
-    model = Padim(
-        backbone="resnet18",
-        layers=["layer1", "layer2", "layer3"],
+    model = Patchcore(
+        backbone="wide_resnet50_2",
+        layers=["layer2", "layer3"],
         pre_trained=True,
+        num_neighbors=9,
     )
     
     engine = Engine()
@@ -142,7 +144,7 @@ def predict_batch(image_dir: str):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="PaDiM 缺陷检测推理")
+    parser = argparse.ArgumentParser(description="PatchCore 缺陷检测推理")
     parser.add_argument("--image", type=str, help="单张图片路径")
     parser.add_argument("--dir", type=str, help="图片目录路径（批量检测）")
     
