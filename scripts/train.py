@@ -1,21 +1,26 @@
 """
-PaDiM 缺陷检测模型训练脚本
+缺陷检测模型训练脚本
 使用 anomalib 2.1.0 API
 
-PaDiM 是一种基于嵌入向量的无监督异常检测方法:
-1. 使用预训练的 CNN 提取多层级特征
-2. 用多元高斯分布对正常样本特征进行建模
-3. 推理时计算测试样本与高斯分布的马氏距离作为异常分数
+支持通过命令行参数切换模型:
+    python train.py                    # 使用默认模型 (padim)
+    python train.py --model patchcore  # 使用 PatchCore 模型
+    python train.py --model padim      # 使用 PaDiM 模型
 """
 
 import warnings
 warnings.filterwarnings("ignore")
 
+import argparse
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from anomalib.data import Folder
 from anomalib.engine import Engine
-from anomalib.models import Padim
+
+from models import get_model, get_model_info, AVAILABLE_MODELS, DEFAULT_MODEL
 
 
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -23,28 +28,35 @@ DATASET_PATH = PROJECT_ROOT / "datasets"
 OUTPUT_PATH = PROJECT_ROOT / "outputs"
 
 
-def train():
+def train(model_name: str = None):
     """
-    训练 PaDiM 缺陷检测模型
+    训练缺陷检测模型
     
     训练流程:
-    1. 初始化 PaDiM 模型
+    1. 初始化模型
     2. 加载数据集
-    3. 训练模型（估计特征分布参数）
+    3. 训练模型
     4. 评估模型性能
     
-    Returns:
-        Padim: 训练完成的模型实例
-    """
-    print("=" * 50)
-    print("PaDiM 缺陷检测模型训练")
-    print("=" * 50)
+    Args:
+        model_name: 模型名称 ('padim' 或 'patchcore')
     
-    model = Padim(
-        backbone="resnet18",
-        layers=["layer1", "layer2", "layer3"],
-        pre_trained=True,
-    )
+    Returns:
+        训练完成的模型实例
+    """
+    if model_name is None:
+        model_name = DEFAULT_MODEL
+    
+    model_info = get_model_info(model_name)
+    
+    print("=" * 50)
+    print(f"{model_name.upper()} 缺陷检测模型训练")
+    print("=" * 50)
+    print(f"模型: {model_info['description']}")
+    print(f"骨干网络: {model_info['backbone']}")
+    print(f"特征层: {model_info['layers']}")
+    
+    model = get_model(model_name)
     
     datamodule = Folder(
         name="defect_detection",
@@ -86,4 +98,14 @@ def train():
 
 
 if __name__ == "__main__":
-    train()
+    parser = argparse.ArgumentParser(description="缺陷检测模型训练")
+    parser.add_argument(
+        "--model",
+        type=str,
+        choices=AVAILABLE_MODELS,
+        default=DEFAULT_MODEL,
+        help=f"模型名称,可选: {AVAILABLE_MODELS}, 默认: {DEFAULT_MODEL}",
+    )
+    
+    args = parser.parse_args()
+    train(args.model)
