@@ -1,0 +1,14 @@
+name: defect_detection
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - anomalib==2.1.0
+      - opencv-python>=4.8.0
+      - pandas>=2.0.0
+      - timm>=1.0.0
+      - einops>=0.8.0
+      - tensorboard>=2.10.0
