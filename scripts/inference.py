@@ -1,10 +1,14 @@
 """
-PatchCore 缺陷检测推理脚本
+缺陷检测推理脚本
 使用 anomalib 2.1.0 API
 
 支持两种推理模式:
 1. 单张图片检测: python inference.py --image /path/to/image.png
 2. 批量检测: python inference.py --dir /path/to/images/
+
+支持通过命令行参数切换模型:
+    python inference.py --image test.png --model patchcore
+    python inference.py --dir images/ --model padim
 
 输出结果包含:
 - 异常分数 (0-1, 越高越异常)
@@ -16,40 +20,33 @@ warnings.filterwarnings("ignore")
 
 from pathlib import Path
 import argparse
+import sys
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from anomalib.data import PredictDataset
 from anomalib.engine import Engine
-from anomalib.models import Patchcore
+
+from models import (
+    get_model,
+    get_checkpoint_path,
+    get_model_info,
+    AVAILABLE_MODELS,
+    DEFAULT_MODEL,
+)
 
 
 PROJECT_ROOT = Path(__file__).parent.parent
 OUTPUT_PATH = PROJECT_ROOT / "outputs"
 
 
-def find_checkpoint():
-    """
-    查找训练好的模型检查点文件
-    
-    模型保存路径结构:
-    outputs/Patchcore/defect_detection/v0/weights/lightning/*.ckpt
-    
-    Returns:
-        Path | None: 检查点文件路径, 未找到则返回 None
-    """
-    ckpt_dir = OUTPUT_PATH / "Patchcore" / "defect_detection" / "v0" / "weights" / "lightning"
-    if ckpt_dir.exists():
-        ckpt_files = list(ckpt_dir.glob("*.ckpt"))
-        if ckpt_files:
-            return ckpt_files[0]
-    return None
-
-
-def predict_single(image_path: str):
+def predict_single(image_path: str, model_name: str = None):
     """
     对单张图片进行缺陷检测
     
     Args:
         image_path: 图片文件路径
+        model_name: 模型名称 ('padim' 或 'patchcore')
     
     Returns:
         list: 预测结果列表
@@ -57,26 +54,28 @@ def predict_single(image_path: str):
     Raises:
         FileNotFoundError: 图片不存在或模型未训练
     """
+    if model_name is None:
+        model_name = DEFAULT_MODEL
+
     image_path = Path(image_path)
     if not image_path.exists():
         raise FileNotFoundError(f"图片不存在: {image_path}")
     
+    model_info = get_model_info(model_name)
+
     print("=" * 50)
-    print("PatchCore 缺陷检测推理")
+    print(f"{model_name.upper()} 缺陷检测推理")
     print("=" * 50)
-    
-    model = Patchcore(
-        backbone="wide_resnet50_2",
-        layers=["layer2", "layer3"],
-        pre_trained=True,
-        num_neighbors=9,
-    )
-    
+    print(f"模型: {model_info['description']}")
+
+    model = get_model(model_name)
     engine = Engine()
     
-    ckpt_path = find_checkpoint()
+    ckpt_path = get_checkpoint_path(model_name, OUTPUT_PATH)
     if ckpt_path is None:
-        raise FileNotFoundError("未找到训练好的模型，请先运行 train.py 进行训练")
+        raise FileNotFoundError(
+            f"未找到 {model_name} 模型,请先运行: python train.py --model {model_name}"
+        )
     
     print(f"\n加载模型: {ckpt_path}")
     print(f"\n检测图片: {image_path}")
@@ -109,12 +108,13 @@ def predict_single(image_path: str):
     return predictions
 
 
-def predict_batch(image_dir: str):
+def predict_batch(image_dir: str, model_name: str = None):
     """
     批量检测目录下的所有图片
     
     Args:
         image_dir: 图片目录路径
+        model_name: 模型名称 ('padim' 或 'patchcore')
     
     Returns:
         list: 预测结果列表
@@ -122,26 +122,28 @@ def predict_batch(image_dir: str):
     Raises:
         FileNotFoundError: 目录不存在或模型未训练
     """
+    if model_name is None:
+        model_name = DEFAULT_MODEL
+
     image_dir = Path(image_dir)
     if not image_dir.exists():
         raise FileNotFoundError(f"目录不存在: {image_dir}")
     
+    model_info = get_model_info(model_name)
+
     print("=" * 50)
-    print("PatchCore 批量缺陷检测")
+    print(f"{model_name.upper()} 批量缺陷检测")
     print("=" * 50)
-    
-    model = Patchcore(
-        backbone="wide_resnet50_2",
-        layers=["layer2", "layer3"],
-        pre_trained=True,
-        num_neighbors=9,
-    )
-    
+    print(f"模型: {model_info['description']}")
+
+    model = get_model(model_name)
     engine = Engine()
     
-    ckpt_path = find_checkpoint()
+    ckpt_path = get_checkpoint_path(model_name, OUTPUT_PATH)
     if ckpt_path is None:
-        raise FileNotFoundError("未找到训练好的模型，请先运行 train.py 进行训练")
+        raise FileNotFoundError(
+            f"未找到 {model_name} 模型,请先运行: python train.py --model {model_name}"
+        )
     
     print(f"\n加载模型: {ckpt_path}")
     
@@ -185,18 +187,25 @@ def predict_batch(image_dir: str):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="PatchCore 缺陷检测推理")
+    parser = argparse.ArgumentParser(description="缺陷检测推理")
     parser.add_argument("--image", type=str, help="单张图片路径")
     parser.add_argument("--dir", type=str, help="图片目录路径（批量检测）")
+    parser.add_argument(
+        "--model",
+        type=str,
+        choices=AVAILABLE_MODELS,
+        default=DEFAULT_MODEL,
+        help=f"模型名称,可选: {AVAILABLE_MODELS}, 默认: {DEFAULT_MODEL}",
+    )
     
     args = parser.parse_args()
     
     if args.image:
-        predict_single(args.image)
+        predict_single(args.image, args.model)
     elif args.dir:
-        predict_batch(args.dir)
+        predict_batch(args.dir, args.model)
     else:
         parser.print_help()
         print("\n示例:")
-        print("  python inference.py --image /path/to/image.png")
-        print("  python inference.py --dir /path/to/images/")
+        print(f"  python inference.py --image /path/to/image.png --model {DEFAULT_MODEL}")
+        print(f"  python inference.py --dir /path/to/images/ --model patchcore")
