@@ -12,13 +12,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # 训练模型 (默认 padim)
 python scripts/train.py --model padim
 python scripts/train.py --model patchcore
+python scripts/train.py --model padim --epochs 5 --image-size 256
+python scripts/train.py --model patchcore --data-dir /path/to/datasets
 
 # 单张图片推理
 python scripts/inference.py --image /path/to/image.png --model padim
 
 # 批量推理
 python scripts/inference.py --dir /path/to/images/ --model patchcore
+
+# 推理时指定图片尺寸,不保存结果文件
+python scripts/inference.py --dir ./test_images/ --image-size 512 --no-save-results
 ```
+
+## CLI Options
+
+| 脚本 | 参数 | 默认值 | 说明 |
+|------|------|--------|------|
+| `train.py` | `--model` | `padim` | 模型名称 (`padim` / `patchcore`) |
+| | `--data-dir` | `./datasets` | 数据集根目录 |
+| | `--image-size` | `256` | 输入图片尺寸 |
+| | `--epochs` | `1` | 训练轮数 |
+| `inference.py` | `--model` | `padim` | 模型名称 |
+| | `--image` | — | 单张图片路径 |
+| | `--dir` | — | 批量检测目录 |
+| | `--image-size` | `256` | 输入图片尺寸 |
+| | `--no-save-results` | `False` | 不保存结果到文件 |
 
 ## Project Structure
 
@@ -45,7 +64,8 @@ defect_detection/
 - **Model Factory 模式**: 通过 `models/configs.py` 集中管理模型参数,`models/factory.py` 根据名称创建模型实例。新增模型只需在 `MODEL_CONFIGS` 中添加配置条目。
 - **训练流程**: `Folder` datamodule 加载数据集 → `Engine(max_epochs=1)` 训练 → 自动评估。
 - **推理流程**: `PredictDataset` 加载图片 → `Engine.predict()` 推理 → 返回 `pred_label`(0/1) 和 `pred_score`(0-1 异常分数)。
-- **检查点路径**: `outputs/{ClassName}/defect_detection/v{version}/weights/lightning/*.ckpt`。
+- **检查点路径**: `outputs/{ClassName}/defect_detection/v{version}/weights/lightning/*.ckpt`。自动扫描最新版本号,无需硬编码 `v0`。
+- **推理结果**: 默认保存到 `results/{model}_{timestamp}.json`,包含每张图片的 `score` 和 `label`。
 
 ## Environment
 
